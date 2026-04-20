@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>模拟 v1.0</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a0a; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        h2 { margin-top: 0; color: #00ffcc; letter-spacing: 4px; text-shadow: 0 0 10px rgba(0,255,204,0.5); }
+        
+        /* 布局控制 */
+        #main-layout { display: flex; gap: 40px; align-items: flex-start; justify-content: center; }
+        
+        /* 左侧规则看板 */
+        #rule-board { 
+            width: 325px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; 
+            padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5); font-size: 14px; line-height: 1.6;
+            flex-shrink: 0; 
+        }
+        #rule-board h3 { color: #f1c40f; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 8px; }
+        .rule-item { margin-bottom: 12px; position: relative; padding-left: 20px; }
+        .rule-item::before { content: '◈'; position: absolute; left: 0; color: #00ffcc; }
+        .rule-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px; }
+        .tag-p { background: #f1c40f; color: #000; }
+        .tag-q { background: #3498db; color: #000; }
+        .tag-t { background: #e74c3c; color: #fff; }
+
+        /* 右侧游戏区 */
+        #game-area { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+        
+        /* 控制栏 */
+        #header-controls { 
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 15px; margin-bottom: 15px; background: #1e1e1e; padding: 12px 25px; 
+            border-radius: 15px; border: 1px solid #333;
+            width: 450px; height: 40px; 
+        }
+        #status-bar { font-size: 14px; flex-grow: 1; }
+        .button-group { display: flex; gap: 10px; min-width: 180px; justify-content: flex-end; }
+        
+        .btn { padding: 6px 14px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 13px; }
+        #exec-btn { background: #2ecc71; color: white; display: none; }
+        #reset-plan-btn { background: #e67e22; color: white; display: none; }
+        #reset-btn { background: #c0392b; color: white; }
+
+        #board { 
+            display: grid; grid-template-columns: repeat(5, 60px 15px) 60px; grid-template-rows: repeat(5, 60px 15px) 60px; 
+            background: #000; padding: 15px; border-radius: 12px; border: 2px solid #00ffcc; 
+        }
+        .cell { background-color: #1a252f; border-radius: 4px; display: flex; justify-content: center; align-items: center; position: relative; cursor: pointer; }
+        .cell-bg-text { position: absolute; font-size: 14px; font-weight: bold; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+        .cell-goal { background-color: #0d3b1a !important; border: 1px solid #00ff00; }
+        .cell-switch { background-color: #3b3b0d !important; border: 1px solid #ffff00; }
+        .wall-v, .wall-h { transition: background 0.3s; }
+        .wall-solid { background-color: #ff4757; box-shadow: 0 0 8px #ff4757; z-index: 5; }
+        .wall-dashed { border: 2px dashed #9b59b6; opacity: 0.5; z-index: 4; }
+        .wall-fixed { background-color: #ecf0f1; }
+        .wall-empty { background-color: #222; }
+        .wall-built { background-color: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
+        .wall-ghost { border: 3px dashed #f39c12 !important; background: rgba(243,156,18,0.2) !important; z-index: 6; }
+
+        .entity { width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; z-index: 10; position: absolute; border: 2px solid #fff; font-weight: bold; transition: all 0.4s ease; }
+        .entity-P { background: #f1c40f; color: #000; }
+        .entity-Q { background: #3498db; color: #000; }
+        .entity-T { background: #e74c3c; color: #fff; z-index: 11; }
+        .ghost { opacity: 0.35; border: 2px dashed #fff; transform: scale(0.8); pointer-events: none; }
+
+        /* 原作链接样式 */
+        #footer-link {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 14px;
+            color: #888;
+        }
+        #footer-link a {
+            color: #00ffcc;
+            text-decoration: underline;
+            transition: 0.3s;
+        }
+        #footer-link a:hover {
+            color: #f1c40f;
+            text-shadow: 0 0 8px rgba(241, 196, 15, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <h2>模拟 v1.0</h2>
+    <div id="main-layout">
+        <div id="rule-board">
+            <h3>规则说明</h3>
+            <div class="rule-item">游戏目标：<span class="rule-tag tag-p"> P</span> 到达 <b>A6</b> 单元格并停留 <b>1 轮</b> 以解析数据。</div>
+            <div class="rule-item"><span class="rule-tag tag-p"> P</span> 每一轮可以移动 <b>一格</b> 或停在原地。</div>
+            <div class="rule-item"><span class="rule-tag tag-q"> Q</span> 每一轮可以移动 <b>一格</b> 或画一道墙壁。</div>
+            <div class="rule-item"><span class="rule-tag tag-t"> T</span> 每一轮向着最近目标追击 <b>两格</b>，优先追 P。</div>
+            <div class="rule-item">每轮行动顺序：<span class="rule-tag tag-q">Q </span> → <span class="rule-tag tag-t">T </span> → <span class="rule-tag tag-p">P </span>。</div>
+            <div class="rule-item"><span class="rule-tag tag-q">Q 画墙</span> 消耗 1 点充能，且该轮<b>不恢复</b>能量。</div>
+            <div class="rule-item">禁止将地图分割成不连通的区域。</div>
+            <div class="rule-item" style="color: #e74c3c; font-weight: bold;">被 T 捕获会导致推演失败。</div>
+            <div class="rule-item">踩在 <b>D4 (开关)</b> 可切换墙的存在状态。</div>
+        </div>
+
+        <div id="game-area">
+            <div id="header-controls">
+                <div id="status-bar">系统初始化...</div>
+                <div class="button-group">
+                    <button id="reset-plan-btn" class="btn" onclick="clearPlan()">重置规划</button>
+                    <button id="exec-btn" class="btn" onclick="executePlan()">执行方案</button>
+                    <button id="reset-btn" class="btn" onclick="resetGame()">重置</button>
+                </div>
+            </div>
+            
+            <div id="game-container">
+                <div id="board"></div>
+            </div>
+
+            <div id="footer-link">
+                请支持原作：<a href="https://store.steampowered.com/app/4379870/2361/" target="_blank">《2361》Steam 商店页面</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let turn = 1, qCharges = 2, switchState = false, gameOver = false, parsingGoal = false;
+        let P = {r:2, c:2}, Q = {r:6, c:8}, T = {r:6, c:4};
+        let grid = [];
+        let plan = { Q: null, P: null, T: [] };
+        const cols = ['A','B','C','D','E','F'];
+
+        function initGrid() {
+            grid = Array.from({length:11},()=>Array(11).fill(0));
+            grid[2][7]=1; grid[6][1]=1; grid[8][7]=1;
+            grid[3][2]=2; grid[3][4]=2; grid[4][5]=2; grid[6][5]=2;
+            grid[4][1]=3; grid[8][1]=3;
+        }
+
+        function isWallSolid(r, c, simSwitch = switchState, simPlanQ = null) {
+            if (simPlanQ && simPlanQ.type === 'build' && simPlanQ.pos.r === r && simPlanQ.pos.c === c) return true;
+            let val = grid[r][c];
+            if (val === 1 || val === 4) return true;
+            if (val === 2) return !simSwitch;
+            if (val === 3) return simSwitch;
+            return false;
+        }
+
+function isMapConnected(simPlanQ) {
+    let visited = new Set(["0,0"]), queue = [{r: 0, c: 0}], count = 0;
+    while(queue.length > 0) {
+        let {r, c} = queue.shift(); count++;
+        [[2,0,1,0], [-2,0,-1,0], [0,2,0,1], [0,-2,0,-1]].forEach(d => {
+            let nr = r + d[0], nc = c + d[1], wr = r + d[2], wc = c + d[3];
+            
+
+            if(nr>=0 && nr<=10 && nc>=0 && nc<=10 && 
+               !isWallSolidForConnection(wr, wc, simPlanQ) && 
+               !visited.has(`${nr},${nc}`)) {
+                visited.add(`${nr},${nc}`); queue.push({r: nr, c: nc});
+            }
+        });
+    }
+    return count === 36;
+}
+
+
+function isWallSolidForConnection(r, c, simPlanQ = null) {
+    if (simPlanQ && simPlanQ.type === 'build' && simPlanQ.pos.r === r && simPlanQ.pos.c === c) return true;
+    let val = grid[r][c];
+    if (val === 1 || val === 4) return true; // 固定墙和已建墙
+    if (val === 2 || val === 3) return true; // 强制将紫色和红色开关墙都视为【实心】
+    return false;
+}
+
+        function render() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            for(let r=0; r<11; r++){
+                for(let c=0; c<11; c++){
+                    const div = document.createElement('div');
+                    if(r%2===0 && c%2===0){
+                        div.className = 'cell';
+                        if(r===10 && c===0) div.classList.add('cell-goal');
+                        if(r===6 && c===6) div.classList.add('cell-switch');
+                        div.innerHTML = `<div class="cell-bg-text">${cols[c/2]}${r/2+1}</div>`;
+                        if(r===P.r && c===P.c) div.innerHTML += `<div class="entity entity-P">P</div>`;
+                        if(r===Q.r && c===Q.c) div.innerHTML += `<div class="entity entity-Q">Q</div>`;
+                        if(r===T.r && c===T.c) div.innerHTML += `<div class="entity entity-T">T</div>`;
+                        if(plan.Q && plan.Q.type === 'move' && r===plan.Q.pos.r && c===plan.Q.pos.c) div.innerHTML += `<div class="entity entity-Q ghost">Q'</div>`;
+                        if(plan.P && r===plan.P.pos.r && c===plan.P.pos.c) div.innerHTML += `<div class="entity entity-P ghost">P'</div>`;
+                        plan.T.forEach((pos, idx) => {
+                            if(r===pos.r && c===pos.c && !(T.r===pos.r && T.c===pos.c)) div.innerHTML += `<div class="entity entity-T ghost" style="border:2px solid #ff4757; opacity:${0.3*(idx+1)}">T${idx+1}</div>`;
+                        });
+                        div.onclick = () => handleCellClick(r, c);
+                    } else if(r%2===0 || c%2===0) {
+                        div.className = r%2===0 ? 'wall-v' : 'wall-h';
+                        let solid = isWallSolid(r, c);
+                        if(grid[r][c] === 1) div.classList.add('wall-fixed', 'wall-solid');
+                        else if(grid[r][c] === 4) div.classList.add('wall-built', 'wall-solid');
+                        else if(grid[r][c] === 2 || grid[r][c] === 3) div.classList.add(solid ? 'wall-solid' : 'wall-dashed');
+                        else div.classList.add('wall-empty');
+                        if(plan.Q && plan.Q.type === 'build' && r===plan.Q.pos.r && c===plan.Q.pos.c) div.classList.add('wall-ghost');
+                        div.onclick = () => handleWallClick(r, c);
+                    }
+                    board.appendChild(div);
+                }
+            }
+            updateStatus();
+        }
+
+        function updateStatus() {
+            const status = document.getElementById('status-bar');
+            const execBtn = document.getElementById('exec-btn');
+            const resetPlanBtn = document.getElementById('reset-plan-btn');
+            
+            if(!gameOver) {
+                status.innerHTML = `[轮 ${turn}/7] 🔋Q: ${qCharges}/2 ${parsingGoal?"(解析中)":""}`;
+                execBtn.style.display = (plan.Q && plan.P) ? 'inline-block' : 'none';
+                resetPlanBtn.style.display = (plan.Q) ? 'inline-block' : 'none';
+            }
+        }
+
+        function handleCellClick(r, c) {
+            if(gameOver) return;
+            if(!plan.Q) {
+                let dist = Math.abs(r-Q.r) + Math.abs(c-Q.c);
+                if(dist === 0 || (dist === 2 && !isWallSolid((r+Q.r)/2, (c+Q.c)/2))) { plan.Q = { type: 'move', pos: {r, c} }; render(); }
+            } else if(!plan.P) {
+                let qT = (plan.Q.type === 'move') ? plan.Q.pos : Q;
+                if(r === qT.r && c === qT.c) return;
+                let dist = Math.abs(r-P.r) + Math.abs(c-P.c);
+                if(dist === 0 || (dist === 2 && !isWallSolid((r+P.r)/2, (c+P.c)/2))) { plan.P = { type: 'move', pos: {r, c} }; calculateTPlan(); render(); }
+            }
+        }
+
+        function handleWallClick(r, c) {
+            if(gameOver || plan.Q || qCharges <= 0) return;
+            if(grid[r][c] === 0 && isMapConnected({ type: 'build', pos: {r, c} })) { plan.Q = { type: 'build', pos: {r, c} }; render(); }
+        }
+
+        function calculateTPlan() {
+            let simSw = switchState, simQ = (plan.Q.type === 'move') ? plan.Q.pos : Q;
+            if(plan.Q.type === 'move' && simQ.r === 6 && simQ.c === 6) simSw = !simSw;
+            let simT = {r: T.r, c: T.c}, simP = P; plan.T = [];
+            for(let i=0; i<2; i++) {
+                let pathP = findPath(simT, simP, simSw, plan.Q), pathQ = findPath(simT, simQ, simSw, plan.Q);
+                let targetPath = (pathP.length <= pathQ.length) ? pathP : pathQ;
+                if(targetPath.length > 0) { simT = targetPath[0]; plan.T.push({...simT}); if((simT.r===simQ.r && simT.c===simQ.c) || (simT.r===simP.r && simT.c===simP.c)) break; }
+            }
+        }
+
+        function findPath(start, target, simSw, simPlanQ) {
+            let queue = [[start]], visited = new Set([`${start.r},${start.c}`]);
+            while(queue.length > 0) {
+                let path = queue.shift(), curr = path[path.length-1];
+                if(curr.r === target.r && curr.c === target.c) return path.slice(1);
+                [[2,0,1,0], [-2,0,-1,0], [0,2,0,1], [0,-2,0,-1]].forEach(d => {
+                    let nr = curr.r + d[0], nc = curr.c + d[1], wr = curr.r + d[2], wc = curr.c + d[3];
+                    if(nr>=0 && nr<=10 && nc>=0 && nc<=10 && !isWallSolid(wr, wc, simSw, simPlanQ) && !visited.has(`${nr},${nc}`)) {
+                        visited.add(`${nr},${nc}`); queue.push([...path, {r:nr, c:nc}]);
+                    }
+                });
+            }
+            return [];
+        }
+
+        async function executePlan() {
+            gameOver = true; let qAct = plan.Q.type;
+            if(qAct === 'move') { Q = plan.Q.pos; if(Q.r===6 && Q.c===6) switchState = !switchState; render(); if(Q.r===T.r && Q.c===T.c) return endGame("💀 失败：Q 撞上了追踪者！", false); await sleep(500); }
+            else { grid[plan.Q.pos.r][plan.Q.pos.c] = 4; qCharges--; render(); await sleep(500); }
+            for(let step of [...plan.T]) { T = step; plan.T = plan.T.filter(p => !(p.r===T.r && p.c===T.c)); render(); if((T.r===Q.r && T.c===Q.c) || (T.r===P.r && T.c===P.c)) return endGame("失败：被捕获！", false); await sleep(400); }
+            P = plan.P.pos; if(P.r===6 && P.c===6) switchState = !switchState; render(); if(P.r===T.r && P.c===T.c) return endGame("💀 失败：P 撞上了追踪者！", false); await sleep(500);
+            if (P.r === 10 && P.c === 0) { if (parsingGoal) return endGame("成功：解析已完成！", true); else { parsingGoal = true; } } else { parsingGoal = false; }
+            if(qAct === 'move') qCharges = Math.min(2, qCharges + 1);
+            turn++; if(turn > 7) return endGame("超时：系统锁定。", false);
+            gameOver = false; clearPlan();
+        }
+
+        function clearPlan() { plan = { Q: null, P: null, T: [] }; render(); }
+        function resetGame() { initGrid(); P={r:2,c:2}; Q={r:6,c:8}; T={r:6,c:4}; turn=1; qCharges=2; switchState=false; gameOver=false; parsingGoal=false; clearPlan(); }
+        function endGame(msg, win) { document.getElementById('status-bar').innerHTML = `<b style="color:${win?'#2ecc71':'#e74c3c'}">${msg}</b>`; }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+        resetGame();
+    </script>
+</body>
+</html>
