@@ -10,7 +10,7 @@
 
 ## 快速开始
 
-1. 下载项目中的 `index.html`。
+1. 下载项目最新release中的 `index.html`。
 2. 使用 Chrome、Edge 或 Firefox 浏览器打开该文件。
 
 
