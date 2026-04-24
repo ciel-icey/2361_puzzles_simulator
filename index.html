@@ -99,6 +99,7 @@
             <div class="rule-item">行动顺序：<span class="rule-tag tag-q">Q</span> → <span class="rule-tag tag-t">T</span> → <span class="rule-tag tag-p">P</span>。</div>
             <div class="rule-item"><span class="rule-tag tag-q">Q </span>画墙消耗 1 层充能。 移动或停在原地恢复1层充能。 充能上限为2层</div>
             <div class="rule-item">禁止制造不连通的地图区域。</div>
+            <div class="rule-item">白色墙为始终存在的墙，红色墙为暂时存在的墙，紫色墙为暂时不存在的墙。</div>
             <div class="rule-item">踩在 <span class="rule-tag tag-switch">开关</span> 切换紫色/红色墙状态。</div>
             </div>
 
@@ -109,8 +110,8 @@
                 <div class="tool-btn" onclick="setTool('GOAL')">放置 目标</div>
                 <div class="tool-btn" onclick="setTool('SWITCH')">放置 开关</div>
                 <div class="tool-btn" onclick="setTool('W1')">固定白墙</div>
-                <div class="tool-btn" onclick="setTool('W2')">紫色墙 (始实)</div>
-                <div class="tool-btn" onclick="setTool('W3')">红色墙 (始虚)</div>
+                <div class="tool-btn" onclick="setTool('W2')">红色墙 (始实)</div>
+                <div class="tool-btn" onclick="setTool('W3')">紫色墙 (始虚)</div>
                 <div class="tool-btn" onclick="setTool('ERASER')">橡皮擦</div>
                 <button class="tool-btn undo-btn" onclick="undoEdit()">撤销上一步</button>
             </div>
@@ -142,8 +143,7 @@
     </div>
 
     <div id="floating-tools">
-        <button class="float-btn" onclick="exportMapCode()">导出地图码</button>
-        <button class="float-btn" onclick="importMapCode()">输入地图码</button>
+        <button class="float-btn" onclick="exportMapCode()">导出地图码链接</button>
     </div>
 
     <script>
@@ -219,15 +219,22 @@
         }
 
         function enterEditMode() {
-            let r = parseInt(prompt("高度 (3-10):", "6")), c = parseInt(prompt("宽度 (3-10):", "6"));
-            if (isNaN(r) || isNaN(c) || r < 3 || r > 10 || c < 3 || c > 10) return showToast("尺寸非法");
+            let rStr = prompt("高度 (3-10):", "6");
+            if (rStr === null) return; 
+            let r = parseInt(rStr);
+            if (isNaN(r) || r < 3 || r > 10) return showToast("尺寸非法"); 
+
+            let cStr = prompt("宽度 (3-10):", "6");
+            if (cStr === null) return; 
+            let c = parseInt(cStr);
+            if (isNaN(c) || c < 3 || c > 10) return showToast("尺寸非法");
+
             isEditMode = true; isTesting = false; gameOver = true;
             P = null; Q = null; T = null; Goal = null; SwPos = null; editHistory = [];
             initGrid(r, c, true);
             updateUIVisibility();
             render();
         }
-
         function setTool(tool) {
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -294,6 +301,8 @@
             turn = 1; qCharges = 2; switchState = false; gameOver = false; parsingGoal = false;
             updateUIVisibility();
             clearPlan();
+
+            if(window.history.pushState) window.history.pushState({}, document.title, window.location.pathname);
         }
 
         function updateUIVisibility() {
@@ -314,35 +323,37 @@
             grid.flat().forEach((v, i) => { if(v !== 0) walls.push(i.toString(36) + v); });
             let rawStr = `${rowCount},${colCount}|${ent(P)}|${ent(Q)}|${ent(T)}|${ent(Goal)}|${ent(SwPos)}|${walls.join('.')}`;
             const code = btoa(rawStr);
-            const input = document.createElement('input');
+            
+            const url = window.location.href.split('?')[0] + '?map=' + encodeURIComponent(code);
+            
+            const input = document.createElement('textarea');
+            input.style.position = 'fixed';
+            input.style.left = '-9999px';
             document.body.appendChild(input);
-            input.value = code; input.select();
+            input.value = url; 
+            input.select();
             document.execCommand('copy');
             document.body.removeChild(input);
-            alert("地图码已复制！");
+            alert("包含地图码的链接已复制！");
         }
 
-        function importMapCode() {
-            const code = prompt("请输入地图码：");
-            if(!code) return;
-            try {
-                const rawStr = atob(code);
-                const [size, pPos, qPos, tPos, gPos, sPos, gData] = rawStr.split('|');
-                const [r, c] = size.split(',').map(Number);
-                rowCount = r; colCount = c;
-                let parsePos = (s) => { let [r, c] = s.split(','); return r==='n'?null:{r:parseInt(r), c:parseInt(c)}; };
-                P = parsePos(pPos); Q = parsePos(qPos); T = parsePos(tPos); Goal = parsePos(gPos); SwPos = parsePos(sPos);
-                initGrid(r, c, true);
-                if(gData) gData.split('.').forEach(s => {
-                    let val = parseInt(s.slice(-1)), idx = parseInt(s.slice(0, -1), 36);
-                    let row = Math.floor(idx / (colCount*2-1)), col = idx % (colCount*2-1);
-                    grid[row][col] = val;
-                });
-                isEditMode = true; isTesting = false; gameOver = true;
-                updateUIVisibility(); render(); showToast("导入成功！");
-            } catch(e) { alert("地图码损坏！"); }
+        function loadMapFromCode(rawStr) {
+            const [size, pPos, qPos, tPos, gPos, sPos, gData] = rawStr.split('|');
+            const [r, c] = size.split(',').map(Number);
+            rowCount = r; colCount = c;
+            let parsePos = (s) => { let [r, c] = s.split(','); return r==='n'?null:{r:parseInt(r), c:parseInt(c)}; };
+            P = parsePos(pPos); Q = parsePos(qPos); T = parsePos(tPos); Goal = parsePos(gPos); SwPos = parsePos(sPos);
+            initGrid(r, c, true);
+            if(gData) gData.split('.').forEach(s => {
+                let val = parseInt(s.slice(-1)), idx = parseInt(s.slice(0, -1), 36);
+                let row = Math.floor(idx / (colCount*2-1)), col = idx % (colCount*2-1);
+                grid[row][col] = val;
+            });
+            isEditMode = true; isTesting = false; gameOver = true;
+            updateUIVisibility(); render(); showToast("地图加载成功！");
         }
 
+      
         function render() {
             const board = document.getElementById('board');
             board.style.gridTemplateColumns = `repeat(${colCount-1}, 60px 15px) 60px`;
@@ -461,7 +472,24 @@
         }
         function endGame(msg, win) { document.getElementById('status-bar').innerHTML = `<b style="color:${win?'#2ecc71':'#e74c3c'}">${msg}</b>`; }
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-        resetToDefault();
+        
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlMapCode = urlParams.get('map');
+            if (urlMapCode) {
+                try {
+                    loadMapFromCode(atob(decodeURIComponent(urlMapCode)));
+                } catch(e) {
+                    alert("链接中的地图码已损坏或不正确，将加载默认地图！");
+                    resetToDefault();
+                }
+            } else {
+                initGrid(6, 6, false);
+                P={r:2,c:2}; Q={r:6,c:8}; T={r:6,c:4}; Goal={r:10,c:0}; SwPos={r:6,c:6};
+                updateUIVisibility();
+                render();
+            }
+        };
     </script>
 </body>
 </html>
