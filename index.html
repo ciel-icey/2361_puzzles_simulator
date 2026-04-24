@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>模拟 v1.1</title>
+    <title>模拟 v1.2</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a0a; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
         h2 { margin-top: 0; color: #00ffcc; letter-spacing: 4px; text-shadow: 0 0 10px rgba(0,255,204,0.5); }
@@ -21,73 +21,99 @@
         .tag-p { background: #f1c40f; color: #000; }
         .tag-q { background: #3498db; color: #000; }
         .tag-t { background: #e74c3c; color: #fff; }
+        .tag-goal { background: #2ecc71; color: #000; }
+        .tag-switch { background: #ffc0cb; color: #000; }
 
         #toast-message { 
             margin-top: 15px; color: #ff4757; font-weight: bold; min-height: 24px; 
             transition: opacity 0.3s; opacity: 0; border-top: 1px solid #333; padding-top: 10px;
         }
 
-
         #game-area { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
         
-
         #header-controls { 
             display: flex; align-items: center; justify-content: space-between;
             gap: 15px; margin-bottom: 15px; background: #1e1e1e; padding: 12px 25px; 
             border-radius: 15px; border: 1px solid #333;
-            width: 450px; height: 40px; 
+            width: 580px; height: 40px; 
         }
         #status-bar { font-size: 14px; flex-grow: 1; }
-        .button-group { display: flex; gap: 10px; min-width: 180px; justify-content: flex-end; }
+        .button-group { display: flex; gap: 8px; justify-content: flex-end; }
         
-        .btn { padding: 6px 14px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 13px; }
+        .btn { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 12px; }
         #exec-btn { background: #2ecc71; color: white; display: none; }
         #reset-plan-btn { background: #e67e22; color: white; display: none; }
         #reset-btn { background: #c0392b; color: white; }
+        #custom-btn { background: #9b59b6; color: white; }
+        #test-btn { background: #2ecc71; color: white; display: none; }
+        #exit-test-btn { background: #e67e22; color: white; display: none; }
+        #back-default-btn { background: #34495e; color: white; display: none; }
+        #clear-btn { background: #7f8c8d; color: white; display: none; }
 
-        #board { 
-            display: grid; grid-template-columns: repeat(5, 60px 15px) 60px; grid-template-rows: repeat(5, 60px 15px) 60px; 
-            background: #000; padding: 15px; border-radius: 12px; border: 2px solid #00ffcc; 
-        }
+        #board { display: grid; background: #000; padding: 15px; border-radius: 12px; border: 2px solid #00ffcc; }
         .cell { background-color: #1a252f; border-radius: 4px; display: flex; justify-content: center; align-items: center; position: relative; cursor: pointer; }
-        .cell-bg-text { position: absolute; font-size: 14px; font-weight: bold; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+        .cell-bg-text { position: absolute; font-size: 12px; font-weight: bold; color: rgba(255, 255, 255, 0.4); pointer-events: none; }
         .cell-goal { background-color: #0d3b1a !important; border: 1px solid #00ff00; }
-        .cell-switch { background-color: #3b3b0d !important; border: 1px solid #ffff00; }
-        .wall-v, .wall-h { transition: background 0.3s; }
+
+        .cell-switch { background-color: rgba(255, 192, 203, 0.6) !important; border: 1px solid #ff69b4; }
+
+        .wall-v, .wall-h { transition: background 0.3s; cursor: pointer; }
         .wall-solid { background-color: #ff4757; box-shadow: 0 0 8px #ff4757; z-index: 5; }
         .wall-dashed { border: 2px dashed #9b59b6; opacity: 0.5; z-index: 4; }
+        .wall-red-dashed { border: 2px dashed #e74c3c; opacity: 0.5; z-index: 4; }
         .wall-fixed { background-color: #ecf0f1; }
         .wall-empty { background-color: #222; }
         .wall-built { background-color: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
         .wall-ghost { border: 3px dashed #f39c12 !important; background: rgba(243,156,18,0.2) !important; z-index: 6; }
 
-        .entity { width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; z-index: 10; position: absolute; border: 2px solid #fff; font-weight: bold; transition: all 0.4s ease; }
+        .entity { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; z-index: 10; position: absolute; border: 2px solid #fff; font-weight: bold; transition: all 0.4s ease; }
         .entity-P { background: #f1c40f; color: #000; }
         .entity-Q { background: #3498db; color: #000; }
         .entity-T { background: #e74c3c; color: #fff; z-index: 11; }
         .ghost { opacity: 0.35; border: 2px dashed #fff; transform: scale(0.8); pointer-events: none; }
 
-        #footer-link {
-            margin-top: 20px; padding: 10px 20px; background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px; font-size: 13px; color: #888;
-        }
+        #edit-tools { margin-top: 15px; display: none; grid-template-columns: repeat(2, 1fr); gap: 8px; border-top: 1px solid #333; padding-top: 15px; }
+        .tool-btn { padding: 8px; font-size: 12px; border: 1px solid #444; background: #222; color: #ccc; cursor: pointer; border-radius: 4px; text-align: center; }
+        .tool-btn.active { background: #00ffcc; color: #000; border-color: #fff; font-weight: bold; }
+        .undo-btn { background: #636e72 !important; color: white !important; grid-column: span 2; margin-top: 5px; }
+
+        #floating-tools { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .float-btn { background: #2c3e50; color: #00ffcc; border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.3s; }
+        .float-btn:hover { background: #00ffcc; color: #000; }
+
+        #footer-link { margin-top: 20px; padding: 10px 20px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 13px; color: #888; }
         #footer-link a { color: #00ffcc; text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <h2>模拟 v1.1</h2>
+    <h2>模拟 v1.2</h2>
     <div id="main-layout">
         <div id="rule-board">
-            <h3>规则说明</h3>
-            <div class="rule-item">游戏目标：<span class="rule-tag tag-p"> P</span> 到达 <b>A6</b> 并停留 <b>1 轮</b>。</div>
-            <div class="rule-item"><span class="rule-tag tag-p"> P</span> 每轮可移动 <b>一格</b> 或待命。</div>
-            <div class="rule-item"><span class="rule-tag tag-q"> Q</span> 每轮可移动 <b>一格</b> 或画一道墙壁。</div>
-            <div class="rule-item"><span class="rule-tag tag-t"> T</span> 每轮追击 <b>两格</b>，优先追 P。</div>
+            <h3 id="panel-title">规则说明</h3>
+            <div id="standard-rules">
+              <div class="rule-item">游戏目标：<span class="rule-tag tag-p"> P</span> 到达 <span class="rule-tag tag-goal">目标节点</span> 并停留 <b>1 轮</b>。</div>
+            <div class="rule-item"><span class="rule-tag tag-p"> P</span> 每轮可移动 <b>一格</b> 或 停留在原地。</div>
+            <div class="rule-item"><span class="rule-tag tag-q"> Q</span> 每轮可移动 <b>一格</b> 或 停留在原地 或 画一道墙壁。</div>
+            <div class="rule-item"><span class="rule-tag tag-t"> T</span> 每轮追击最近的目标 <b>两格</b>，距离相同时优先追 P。</div>
             <div class="rule-item">行动顺序：<span class="rule-tag tag-q">Q</span> → <span class="rule-tag tag-t">T</span> → <span class="rule-tag tag-p">P</span>。</div>
-            <div class="rule-item"><span class="rule-tag tag-q">Q 画墙</span> 消耗 1 点充能且不恢复能量。</div>
-            <div class="rule-item">禁止完全分割地图区域。</div>
-            <div class="rule-item">踩在 <b>D4 (开关)</b> 切换紫色/红色墙状态。</div>
+            <div class="rule-item"><span class="rule-tag tag-q">Q </span>画墙消耗 1 层充能。 移动或停在原地恢复1层充能。 充能上限为2层</div>
+            <div class="rule-item">禁止制造不连通的地图区域。</div>
+            <div class="rule-item">踩在 <span class="rule-tag tag-switch">开关</span> 切换紫色/红色墙状态。</div>
+            </div>
+
+            <div id="edit-tools">
+                <div class="tool-btn active" onclick="setTool('P')">放置 P</div>
+                <div class="tool-btn" onclick="setTool('Q')">放置 Q</div>
+                <div class="tool-btn" onclick="setTool('T')">放置 T</div>
+                <div class="tool-btn" onclick="setTool('GOAL')">放置 目标</div>
+                <div class="tool-btn" onclick="setTool('SWITCH')">放置 开关</div>
+                <div class="tool-btn" onclick="setTool('W1')">固定白墙</div>
+                <div class="tool-btn" onclick="setTool('W2')">紫色墙 (始实)</div>
+                <div class="tool-btn" onclick="setTool('W3')">红色墙 (始虚)</div>
+                <div class="tool-btn" onclick="setTool('ERASER')">橡皮擦</div>
+                <button class="tool-btn undo-btn" onclick="undoEdit()">撤销上一步</button>
+            </div>
             
             <div id="toast-message"></div>
         </div>
@@ -96,6 +122,11 @@
             <div id="header-controls">
                 <div id="status-bar">系统初始化...</div>
                 <div class="button-group">
+                    <button id="clear-btn" class="btn" onclick="clearMap()">清空</button>
+                    <button id="test-btn" class="btn" onclick="startTest()">测试地图</button>
+                    <button id="exit-test-btn" class="btn" onclick="exitTest()">退出测试</button>
+                    <button id="custom-btn" class="btn" onclick="enterEditMode()">自定义地图</button>
+                    <button id="back-default-btn" class="btn" onclick="resetToDefault()">返回默认地图</button>
                     <button id="reset-plan-btn" class="btn" onclick="clearPlan()">重置规划</button>
                     <button id="exec-btn" class="btn" onclick="executePlan()">执行方案</button>
                     <button id="reset-btn" class="btn" onclick="resetGame()">重置</button>
@@ -110,28 +141,55 @@
         </div>
     </div>
 
+    <div id="floating-tools">
+        <button class="float-btn" onclick="exportMapCode()">导出地图码</button>
+        <button class="float-btn" onclick="importMapCode()">输入地图码</button>
+    </div>
+
     <script>
         let turn = 1, qCharges = 2, switchState = false, gameOver = false, parsingGoal = false;
-        let P = {r:2, c:2}, Q = {r:6, c:8}, T = {r:6, c:4};
-        let grid = [], toastTimer = null;
+        let isEditMode = false, isTesting = false, currentTool = 'P';
+        let rowCount = 6, colCount = 6;
+        let P = null, Q = null, T = null, Goal = null, SwPos = null;
+        let grid = [], toastTimer = null, editHistory = [];
         let plan = { Q: null, P: null, T: [] };
-        const cols = ['A','B','C','D','E','F'];
+        let testSnapshot = null;
+        const cols = ['A','B','C','D','E','F','G','H','I','J'];
 
-        function initGrid() {
-            grid = Array.from({length:11},()=>Array(11).fill(0));
-            grid[2][7]=1; grid[6][1]=1; grid[8][7]=1;
-            grid[3][2]=2; grid[3][4]=2; grid[4][5]=2; grid[6][5]=2;
-            grid[4][1]=3; grid[8][1]=3;
+        function initGrid(r=6, c=6, empty=false) {
+            rowCount = r; colCount = c;
+            grid = Array.from({length: r*2-1}, () => Array(c*2-1).fill(0));
+            if(!empty && r===6 && c===6) {
+                grid[2][7]=1; grid[6][1]=1; grid[8][7]=1;
+                grid[3][2]=2; grid[3][4]=2; grid[4][5]=2; grid[6][5]=2;
+                grid[4][1]=3; grid[8][1]=3;
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-message');
+            toast.innerText = msg; toast.style.opacity = '1';
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.style.opacity = '0'; toastTimer = null; }, 2000);
+        }
+
+        function saveEditState() {
+            if (editHistory.length > 20) editHistory.shift();
+            editHistory.push(JSON.stringify({P, Q, T, Goal, SwPos, grid}));
+        }
+
+        function undoEdit() {
+            if (editHistory.length === 0) return showToast("没有可撤销的步骤");
+            const state = JSON.parse(editHistory.pop());
+            P = state.P; Q = state.Q; T = state.T; Goal = state.Goal; SwPos = state.SwPos; grid = state.grid;
+            render();
         }
 
         function isWallSolidForConnection(r, c, simPlanQ = null) {
             if (simPlanQ && simPlanQ.type === 'build' && simPlanQ.pos.r === r && simPlanQ.pos.c === c) return true;
             let val = grid[r][c];
-            if (val === 1 || val === 4) return true;
-            if (val === 2 || val === 3) return true; 
-            return false;
+            return (val === 1 || val === 4 || val === 2 || val === 3);
         }
-
 
         function isWallSolid(r, c, simSwitch = switchState, simPlanQ = null) {
             if (simPlanQ && simPlanQ.type === 'build' && simPlanQ.pos.r === r && simPlanQ.pos.c === c) return true;
@@ -143,64 +201,185 @@
         }
 
         function isMapConnected(simPlanQ) {
-            let visited = new Set(["0,0"]), queue = [{r: 0, c: 0}], count = 0;
+            if(!P && !Q && !T) return true;
+            let startNode = null;
+            for(let r=0; r<rowCount*2-1; r+=2){ for(let c=0; c<colCount*2-1; c+=2){ startNode = {r,c}; break; } if(startNode) break; }
+            if(!startNode) return true;
+            let visited = new Set([`${startNode.r},${startNode.c}`]), queue = [startNode], count = 0;
             while(queue.length > 0) {
                 let {r, c} = queue.shift(); count++;
                 [[2,0,1,0], [-2,0,-1,0], [0,2,0,1], [0,-2,0,-1]].forEach(d => {
                     let nr = r + d[0], nc = c + d[1], wr = r + d[2], wc = c + d[3];
-                    if(nr>=0 && nr<=10 && nc>=0 && nc<=10 && !isWallSolidForConnection(wr, wc, simPlanQ) && !visited.has(`${nr},${nc}`)) {
+                    if(nr>=0 && nr<rowCount*2-1 && nc>=0 && nc<colCount*2-1 && !isWallSolidForConnection(wr, wc, simPlanQ) && !visited.has(`${nr},${nc}`)) {
                         visited.add(`${nr},${nc}`); queue.push({r: nr, c: nc});
                     }
                 });
             }
-            return count === 36;
+            return count === (rowCount * colCount);
         }
 
-        function showToast(msg) {
-            const toast = document.getElementById('toast-message');
-            toast.innerText = msg;
-            toast.style.opacity = '1';
-            if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
-                toast.style.opacity = '0';
-                toastTimer = null;
-            }, 2000);
+        function enterEditMode() {
+            let r = parseInt(prompt("高度 (3-10):", "6")), c = parseInt(prompt("宽度 (3-10):", "6"));
+            if (isNaN(r) || isNaN(c) || r < 3 || r > 10 || c < 3 || c > 10) return showToast("尺寸非法");
+            isEditMode = true; isTesting = false; gameOver = true;
+            P = null; Q = null; T = null; Goal = null; SwPos = null; editHistory = [];
+            initGrid(r, c, true);
+            updateUIVisibility();
+            render();
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function handleEditClick(r, c) {
+            let isNode = (r%2===0 && c%2===0);
+            let isCorner = (r%2!==0 && c%2!==0);
+            if (isCorner) return showToast("不能在方格角落放置墙体");
+            saveEditState();
+            if(isNode) {
+                if(currentTool === 'ERASER') {
+                    if(P && P.r===r && P.c===c) P = null;
+                    else if(Q && Q.r===r && Q.c===c) Q = null;
+                    else if(T && T.r===r && T.c===c) T = null;
+                    else if(Goal && Goal.r===r && Goal.c===c) Goal = null;
+                    else if(SwPos && SwPos.r===r && SwPos.c===c) SwPos = null;
+                } else if(['P','Q','T','GOAL','SWITCH'].includes(currentTool)) {
+                    if((P && P.r===r && P.c===c) || (Q && Q.r===r && Q.c===c) || (T && T.r===r && T.c===c) || 
+                       (Goal && Goal.r===r && Goal.c===c) || (SwPos && SwPos.r===r && SwPos.c===c)) {
+                        editHistory.pop(); return showToast("该位置已有元素");
+                    }
+                    let pos = {r, c};
+                    if(currentTool === 'P') P = pos; else if(currentTool === 'Q') Q = pos; else if(currentTool === 'T') T = pos;
+                    else if(currentTool === 'GOAL') Goal = pos; else if(currentTool === 'SWITCH') SwPos = pos;
+                }
+            } else {
+                if(currentTool === 'ERASER') grid[r][c] = 0;
+                else if(['W1','W2','W3'].includes(currentTool)) {
+                    if (grid[r][c] !== 0) { editHistory.pop(); return showToast("该位置已有墙体"); }
+                    let old = grid[r][c], val = currentTool==='W1'?1:(currentTool==='W2'?2:3);
+                    grid[r][c] = val;
+                    if(!isMapConnected()) { grid[r][c] = old; editHistory.pop(); return showToast("不能制造封闭区域"); }
+                }
+            }
+            render();
+        }
+
+        function startTest() {
+            if(!P || !Q || !T || !Goal) return showToast("缺失关键节点(P/Q/T/目标)");
+            if(!isMapConnected()) return showToast("地图未连通");
+            isTesting = true; isEditMode = false; gameOver = false;
+            turn = 1; qCharges = 2; switchState = false; parsingGoal = false;
+            testSnapshot = { P: {...P}, Q: {...Q}, T: {...T}, grid: grid.map(row => [...row]) };
+            updateUIVisibility();
+            clearPlan();
+        }
+
+        function exitTest() {
+            isTesting = false; isEditMode = true; gameOver = true;
+            P = {...testSnapshot.P}; Q = {...testSnapshot.Q}; T = {...testSnapshot.T}; grid = testSnapshot.grid.map(row => [...row]);
+            updateUIVisibility();
+            document.getElementById('exec-btn').style.display = 'none';
+            document.getElementById('reset-plan-btn').style.display = 'none';
+            render();
+        }
+
+        function resetToDefault() {
+            if(!confirm("确定要返回默认地图吗？")) return;
+            isEditMode = false; isTesting = false;
+            initGrid(6, 6, false);
+            P={r:2,c:2}; Q={r:6,c:8}; T={r:6,c:4}; Goal={r:10,c:0}; SwPos={r:6,c:6};
+            turn = 1; qCharges = 2; switchState = false; gameOver = false; parsingGoal = false;
+            updateUIVisibility();
+            clearPlan();
+        }
+
+        function updateUIVisibility() {
+            document.getElementById('edit-tools').style.display = isEditMode ? 'grid' : 'none';
+            document.getElementById('standard-rules').style.display = isEditMode ? 'none' : 'block';
+            document.getElementById('test-btn').style.display = isEditMode ? 'inline-block' : 'none';
+            document.getElementById('clear-btn').style.display = isEditMode ? 'inline-block' : 'none';
+            document.getElementById('exit-test-btn').style.display = isTesting ? 'inline-block' : 'none';
+            document.getElementById('custom-btn').style.display = (!isEditMode && !isTesting) ? 'inline-block' : 'none';
+            document.getElementById('back-default-btn').style.display = (isEditMode || isTesting) ? 'inline-block' : 'none';
+            document.getElementById('status-bar').innerText = isEditMode ? "编辑模式：请配置地图元素" : "系统就绪";
+        }
+
+        function exportMapCode() {
+            if(!P || !Q || !T || !Goal) return showToast("地图不完整，无法导出");
+            let ent = (o) => o ? `${o.r},${o.c}` : 'n,n';
+            let walls = [];
+            grid.flat().forEach((v, i) => { if(v !== 0) walls.push(i.toString(36) + v); });
+            let rawStr = `${rowCount},${colCount}|${ent(P)}|${ent(Q)}|${ent(T)}|${ent(Goal)}|${ent(SwPos)}|${walls.join('.')}`;
+            const code = btoa(rawStr);
+            const input = document.createElement('input');
+            document.body.appendChild(input);
+            input.value = code; input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            alert("地图码已复制！");
+        }
+
+        function importMapCode() {
+            const code = prompt("请输入地图码：");
+            if(!code) return;
+            try {
+                const rawStr = atob(code);
+                const [size, pPos, qPos, tPos, gPos, sPos, gData] = rawStr.split('|');
+                const [r, c] = size.split(',').map(Number);
+                rowCount = r; colCount = c;
+                let parsePos = (s) => { let [r, c] = s.split(','); return r==='n'?null:{r:parseInt(r), c:parseInt(c)}; };
+                P = parsePos(pPos); Q = parsePos(qPos); T = parsePos(tPos); Goal = parsePos(gPos); SwPos = parsePos(sPos);
+                initGrid(r, c, true);
+                if(gData) gData.split('.').forEach(s => {
+                    let val = parseInt(s.slice(-1)), idx = parseInt(s.slice(0, -1), 36);
+                    let row = Math.floor(idx / (colCount*2-1)), col = idx % (colCount*2-1);
+                    grid[row][col] = val;
+                });
+                isEditMode = true; isTesting = false; gameOver = true;
+                updateUIVisibility(); render(); showToast("导入成功！");
+            } catch(e) { alert("地图码损坏！"); }
         }
 
         function render() {
             const board = document.getElementById('board');
+            board.style.gridTemplateColumns = `repeat(${colCount-1}, 60px 15px) 60px`;
+            board.style.gridTemplateRows = `repeat(${rowCount-1}, 60px 15px) 60px`;
             board.innerHTML = '';
-            for(let r=0; r<11; r++){
-                for(let c=0; c<11; c++){
+            for(let r=0; r<rowCount*2-1; r++){
+                for(let c=0; c<colCount*2-1; c++){
                     const div = document.createElement('div');
                     if(r%2===0 && c%2===0){
                         div.className = 'cell';
-                        if(r===10 && c===0) div.classList.add('cell-goal');
-                        if(r===6 && c===6) div.classList.add('cell-switch');
+                        if(Goal && r===Goal.r && c===Goal.c) div.classList.add('cell-goal');
+                        if(SwPos && r===SwPos.r && c===SwPos.c) div.classList.add('cell-switch');
                         div.innerHTML = `<div class="cell-bg-text">${cols[c/2]}${r/2+1}</div>`;
-                        if(r===P.r && c===P.c) div.innerHTML += `<div class="entity entity-P">P</div>`;
-                        if(r===Q.r && c===Q.c) div.innerHTML += `<div class="entity entity-Q">Q</div>`;
-                        if(r===T.r && c===T.c) div.innerHTML += `<div class="entity entity-T">T</div>`;
-                        if(plan.Q && plan.Q.type === 'move' && r===plan.Q.pos.r && c===plan.Q.pos.c) div.innerHTML += `<div class="entity entity-Q ghost">Q'</div>`;
-                        if(plan.P && r===plan.P.pos.r && c===plan.P.pos.c) div.innerHTML += `<div class="entity entity-P ghost">P'</div>`;
-                        plan.T.forEach((pos, idx) => {
-                            if(r===pos.r && c===pos.c && !(T.r===pos.r && T.c===pos.c)) div.innerHTML += `<div class="entity entity-T ghost" style="border:2px solid #ff4757; opacity:${0.3*(idx+1)}">T${idx+1}</div>`;
-                        });
-                        div.onclick = () => handleCellClick(r, c);
-                    } else if(r%2===0 || c%2===0) {
+                        if(P && r===P.r && c===P.c) div.innerHTML += `<div class="entity entity-P">P</div>`;
+                        if(Q && r===Q.r && c===Q.c) div.innerHTML += `<div class="entity entity-Q">Q</div>`;
+                        if(T && r===T.r && c===T.c) div.innerHTML += `<div class="entity entity-T">T</div>`;
+                        if(!isEditMode) {
+                            if(plan.Q && plan.Q.type==='move' && r===plan.Q.pos.r && c===plan.Q.pos.c) div.innerHTML += `<div class="entity entity-Q ghost">Q'</div>`;
+                            if(plan.P && r===plan.P.pos.r && c===plan.P.pos.c) div.innerHTML += `<div class="entity entity-P ghost">P'</div>`;
+                            plan.T.forEach((pos, idx) => { if(r===pos.r && c===pos.c && !(T.r===pos.r && T.c===pos.c)) div.innerHTML += `<div class="entity entity-T ghost" style="border:2px solid #ff4757; opacity:${0.3*(idx+1)}">T${idx+1}</div>`; });
+                        }
+                        div.onclick = () => isEditMode ? handleEditClick(r, c) : handleCellClick(r, c);
+                    } else {
                         div.className = r%2===0 ? 'wall-v' : 'wall-h';
                         let solid = isWallSolid(r, c);
                         if(grid[r][c] === 1) div.classList.add('wall-fixed', 'wall-solid');
                         else if(grid[r][c] === 4) div.classList.add('wall-built', 'wall-solid');
-                        else if(grid[r][c] === 2 || grid[r][c] === 3) div.classList.add(solid ? 'wall-solid' : 'wall-dashed');
+                        else if(grid[r][c] === 2) div.classList.add(solid ? 'wall-solid' : 'wall-dashed');
+                        else if(grid[r][c] === 3) div.classList.add(solid ? 'wall-solid' : 'wall-red-dashed');
                         else div.classList.add('wall-empty');
-                        if(plan.Q && plan.Q.type === 'build' && r===plan.Q.pos.r && c===plan.Q.pos.c) div.classList.add('wall-ghost');
-                        div.onclick = () => handleWallClick(r, c);
+                        if(!isEditMode && plan.Q && plan.Q.type==='build' && r===plan.Q.pos.r && c===plan.Q.pos.c) div.classList.add('wall-ghost');
+                        div.onclick = () => isEditMode ? handleEditClick(r, c) : handleWallClick(r, c);
                     }
                     board.appendChild(div);
                 }
             }
-            updateStatus();
+            if(!isEditMode) updateStatus();
         }
 
         function updateStatus() {
@@ -215,38 +394,33 @@
         function handleCellClick(r, c) {
             if(gameOver) return;
             if(!plan.Q) {
-                let dist = Math.abs(r-Q.r) + Math.abs(c-Q.c);
-                if(dist === 0 || (dist === 2 && !isWallSolid((r+Q.r)/2, (c+Q.c)/2))) { plan.Q = { type: 'move', pos: {r, c} }; render(); }
+                if(P && r===P.r && c===P.c && (r!==Q.r || c!==Q.c)) return showToast("不能与 P 重叠");
+                let d = Math.abs(r-Q.r) + Math.abs(c-Q.c);
+                if(d===0 || (d===2 && !isWallSolid((r+Q.r)/2, (c+Q.c)/2))) { plan.Q = { type: 'move', pos: {r, c} }; render(); }
             } else if(!plan.P) {
-                let qT = (plan.Q.type === 'move') ? plan.Q.pos : Q;
-                if(r === qT.r && c === qT.c) return;
-                let dist = Math.abs(r-P.r) + Math.abs(c-P.c);
-                if(dist === 0 || (dist === 2 && !isWallSolid((r+P.r)/2, (c+P.c)/2))) { plan.P = { type: 'move', pos: {r, c} }; calculateTPlan(); render(); }
+                let qT = (plan.Q.type==='move') ? plan.Q.pos : Q; 
+                if(r===qT.r && c===qT.c) return showToast("不能与 Q 重叠");
+                let d = Math.abs(r-P.r) + Math.abs(c-P.c);
+                let simSw = switchState;
+                if(plan.Q.type==='move' && SwPos && plan.Q.pos.r===SwPos.r && plan.Q.pos.c===SwPos.c) simSw = !simSw;
+                if(d===0 || (d===2 && !isWallSolid((r+P.r)/2, (c+P.c)/2, simSw))) { plan.P = { type: 'move', pos: {r, c} }; calculateTPlan(); render(); }
             }
         }
 
         function handleWallClick(r, c) {
-            if(gameOver || plan.Q || qCharges <= 0) return;
-            if(grid[r][c] !== 0) {
-                showToast("此处已存在墙壁");
-                return;
-            }
-            if(!isMapConnected({ type: 'build', pos: {r, c} })) {
-                showToast("不能创造封闭区域");
-                return;
-            }
-            plan.Q = { type: 'build', pos: {r, c} }; 
-            render();
+            if(gameOver || plan.Q || qCharges <= 0 || grid[r][c] !== 0) return;
+            if(!isMapConnected({ type: 'build', pos: {r, c} })) return showToast("不能制造封闭区域");
+            plan.Q = { type: 'build', pos: {r, c} }; render();
         }
 
         function calculateTPlan() {
-            let simSw = switchState, simQ = (plan.Q.type === 'move') ? plan.Q.pos : Q;
-            if(plan.Q.type === 'move' && simQ.r === 6 && simQ.c === 6) simSw = !simSw;
-            let simT = {r: T.r, c: T.c}, simP = P; plan.T = [];
+            let simSw = switchState, simQ = (plan.Q.type==='move') ? plan.Q.pos : Q;
+            if(SwPos && plan.Q.type==='move' && simQ.r===SwPos.r && simQ.c===SwPos.c) simSw = !simSw;
+            let simT = {...T}, simP = P; plan.T = [];
             for(let i=0; i<2; i++) {
                 let pathP = findPath(simT, simP, simSw, plan.Q), pathQ = findPath(simT, simQ, simSw, plan.Q);
-                let targetPath = (pathP.length <= pathQ.length) ? pathP : pathQ;
-                if(targetPath.length > 0) { simT = targetPath[0]; plan.T.push({...simT}); if((simT.r===simQ.r && simT.c===simQ.c) || (simT.r===simP.r && simT.c===simP.c)) break; }
+                let target = (pathP.length > 0 && (pathQ.length === 0 || pathP.length <= pathQ.length)) ? pathP : pathQ;
+                if(target.length > 0) { simT = target[0]; plan.T.push({...simT}); if((simT.r===simQ.r && simT.c===simQ.c) || (simT.r===simP.r && simT.c===simP.c)) break; }
             }
         }
 
@@ -257,7 +431,7 @@
                 if(curr.r === target.r && curr.c === target.c) return path.slice(1);
                 [[2,0,1,0], [-2,0,-1,0], [0,2,0,1], [0,-2,0,-1]].forEach(d => {
                     let nr = curr.r + d[0], nc = curr.c + d[1], wr = curr.r + d[2], wc = curr.c + d[3];
-                    if(nr>=0 && nr<=10 && nc>=0 && nc<=10 && !isWallSolid(wr, wc, simSw, simPlanQ) && !visited.has(`${nr},${nc}`)) {
+                    if(nr>=0 && nr<rowCount*2-1 && nc>=0 && nc<colCount*2-1 && !isWallSolid(wr, wc, simSw, simPlanQ) && !visited.has(`${nr},${nc}`)) {
                         visited.add(`${nr},${nc}`); queue.push([...path, {r:nr, c:nc}]);
                     }
                 });
@@ -266,22 +440,28 @@
         }
 
         async function executePlan() {
-            gameOver = true; let qAct = plan.Q.type;
-            if(qAct === 'move') { Q = plan.Q.pos; if(Q.r===6 && Q.c===6) switchState = !switchState; render(); if(Q.r===T.r && Q.c===T.c) return endGame("失败：Q 撞上了追踪者！", false); await sleep(500); }
+            gameOver = true; 
+            if(plan.Q.type === 'move') { Q = plan.Q.pos; if(SwPos && Q.r===SwPos.r && Q.c===SwPos.c) switchState = !switchState; render(); if(Q.r===T.r && Q.c===T.c) return endGame("失败：被捕获！", false); await sleep(500); }
             else { grid[plan.Q.pos.r][plan.Q.pos.c] = 4; qCharges--; render(); await sleep(500); }
             for(let step of [...plan.T]) { T = step; plan.T = plan.T.filter(p => !(p.r===T.r && p.c===T.c)); render(); if((T.r===Q.r && T.c===Q.c) || (T.r===P.r && T.c===P.c)) return endGame("失败：被捕获！", false); await sleep(400); }
-            P = plan.P.pos; if(P.r===6 && P.c===6) switchState = !switchState; render(); if(P.r===T.r && P.c===T.c) return endGame("失败：P 撞上了追踪者！", false); await sleep(500);
-            if (P.r === 10 && P.c === 0) { if (parsingGoal) return endGame("成功：解析已完成！", true); else { parsingGoal = true; } } else { parsingGoal = false; }
-            if(qAct === 'move') qCharges = Math.min(2, qCharges + 1);
+            P = plan.P.pos; if(SwPos && P.r===SwPos.r && P.c===SwPos.c) switchState = !switchState; render(); if(P.r===T.r && P.c===T.c) return endGame("失败：被捕获！", false); await sleep(500);
+            if (Goal && P.r === Goal.r && P.c === Goal.c) { if (parsingGoal) return endGame("成功：解析已完成！", true); else parsingGoal = true; } else parsingGoal = false;
+            if(plan.Q.type === 'move') qCharges = Math.min(2, qCharges + 1);
             turn++; if(turn > 7) return endGame("超时：系统锁定。", false);
             gameOver = false; clearPlan();
         }
 
         function clearPlan() { plan = { Q: null, P: null, T: [] }; render(); }
-        function resetGame() { initGrid(); P={r:2,c:2}; Q={r:6,c:8}; T={r:6,c:4}; turn=1; qCharges=2; switchState=false; gameOver=false; parsingGoal=false; clearPlan(); }
+        function clearMap() { saveEditState(); initGrid(rowCount, colCount, true); P=null; Q=null; T=null; Goal=null; SwPos=null; render(); }
+        function resetGame() { 
+            if(isTesting) {
+                P = {...testSnapshot.P}; Q = {...testSnapshot.Q}; T = {...testSnapshot.T}; grid = testSnapshot.grid.map(row => [...row]);
+                turn = 1; qCharges = 2; switchState = false; gameOver = false; parsingGoal = false; clearPlan();
+            } else resetToDefault();
+        }
         function endGame(msg, win) { document.getElementById('status-bar').innerHTML = `<b style="color:${win?'#2ecc71':'#e74c3c'}">${msg}</b>`; }
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-        resetGame();
+        resetToDefault();
     </script>
 </body>
 </html>
