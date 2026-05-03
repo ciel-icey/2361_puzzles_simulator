@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>模拟 v1.2</title>
+    <title>模拟 v1.3</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #0a0a0a; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
         h2 { margin-top: 0; color: #00ffcc; letter-spacing: 4px; text-shadow: 0 0 10px rgba(0,255,204,0.5); }
@@ -81,13 +81,13 @@
         .float-btn { background: #2c3e50; color: #00ffcc; border: 1px solid #00ffcc; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.3s; }
         .float-btn:hover { background: #00ffcc; color: #000; }
 
-        #footer-link { margin-top: 20px; padding: 10px 20px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 13px; color: #888; }
+        #footer-link { margin-top: 20px; padding: 10px 20px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; font-size: 13px; color: #888; text-align: center; line-height: 1.8; }
         #footer-link a { color: #00ffcc; text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <h2>模拟 v1.2</h2>
+    <h2>模拟 v1.3</h2>
     <div id="main-layout">
         <div id="rule-board">
             <h3 id="panel-title">规则说明</h3>
@@ -137,7 +137,8 @@
             <div id="board"></div>
 
             <div id="footer-link">
-                请支持原作：<a href="https://store.steampowered.com/app/4379870/2361/" target="_blank">《2361》Steam 商店页面</a>
+                请支持原作：<a href="https://store.steampowered.com/app/4379870/2361/" target="_blank">《2361》Steam 商店页面</a><br>
+                GitHub 仓库：<a href="https://github.com/ciel-icey/2361_puzzles_simulator" target="_blank">ciel-icey/2361_puzzles_simulator</a>
             </div>
         </div>
     </div>
@@ -147,7 +148,7 @@
     </div>
 
     <script>
-        let turn = 1, qCharges = 2, switchState = false, gameOver = false, parsingGoal = false;
+        let turn = 1, maxTurns = 7, qCharges = 2, switchState = false, gameOver = false, parsingGoal = false;
         let isEditMode = false, isTesting = false, currentTool = 'P';
         let rowCount = 6, colCount = 6;
         let P = null, Q = null, T = null, Goal = null, SwPos = null;
@@ -229,12 +230,19 @@
             let c = parseInt(cStr);
             if (isNaN(c) || c < 3 || c > 10) return showToast("尺寸非法");
 
+            let tStr = prompt("最大轮数 (1-99):", "7");
+            if (tStr === null) return;
+            let t = parseInt(tStr);
+            if (isNaN(t) || t < 1 || t > 99) return showToast("轮数非法");
+
+            maxTurns = t;
             isEditMode = true; isTesting = false; gameOver = true;
             P = null; Q = null; T = null; Goal = null; SwPos = null; editHistory = [];
             initGrid(r, c, true);
             updateUIVisibility();
             render();
         }
+        
         function setTool(tool) {
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -298,7 +306,7 @@
             isEditMode = false; isTesting = false;
             initGrid(6, 6, false);
             P={r:2,c:2}; Q={r:6,c:8}; T={r:6,c:4}; Goal={r:10,c:0}; SwPos={r:6,c:6};
-            turn = 1; qCharges = 2; switchState = false; gameOver = false; parsingGoal = false;
+            turn = 1; maxTurns = 7; qCharges = 2; switchState = false; gameOver = false; parsingGoal = false;
             updateUIVisibility();
             clearPlan();
 
@@ -313,6 +321,7 @@
             document.getElementById('exit-test-btn').style.display = isTesting ? 'inline-block' : 'none';
             document.getElementById('custom-btn').style.display = (!isEditMode && !isTesting) ? 'inline-block' : 'none';
             document.getElementById('back-default-btn').style.display = (isEditMode || isTesting) ? 'inline-block' : 'none';
+            document.getElementById('reset-btn').style.display = isEditMode ? 'none' : 'inline-block';
             document.getElementById('status-bar').innerText = isEditMode ? "编辑模式：请配置地图元素" : "系统就绪";
         }
 
@@ -321,7 +330,7 @@
             let ent = (o) => o ? `${o.r},${o.c}` : 'n,n';
             let walls = [];
             grid.flat().forEach((v, i) => { if(v !== 0) walls.push(i.toString(36) + v); });
-            let rawStr = `${rowCount},${colCount}|${ent(P)}|${ent(Q)}|${ent(T)}|${ent(Goal)}|${ent(SwPos)}|${walls.join('.')}`;
+            let rawStr = `${rowCount},${colCount},${maxTurns}|${ent(P)}|${ent(Q)}|${ent(T)}|${ent(Goal)}|${ent(SwPos)}|${walls.join('.')}`;
             const code = btoa(rawStr);
             
             const url = window.location.href.split('?')[0] + '?map=' + encodeURIComponent(code);
@@ -339,8 +348,12 @@
 
         function loadMapFromCode(rawStr) {
             const [size, pPos, qPos, tPos, gPos, sPos, gData] = rawStr.split('|');
-            const [r, c] = size.split(',').map(Number);
+            const sizeParts = size.split(',');
+            const r = parseInt(sizeParts[0]);
+            const c = parseInt(sizeParts[1]);
+            maxTurns = sizeParts.length > 2 ? parseInt(sizeParts[2]) : 7;
             rowCount = r; colCount = c;
+            
             let parsePos = (s) => { let [r, c] = s.split(','); return r==='n'?null:{r:parseInt(r), c:parseInt(c)}; };
             P = parsePos(pPos); Q = parsePos(qPos); T = parsePos(tPos); Goal = parsePos(gPos); SwPos = parsePos(sPos);
             initGrid(r, c, true);
@@ -353,7 +366,6 @@
             updateUIVisibility(); render(); showToast("地图加载成功！");
         }
 
-      
         function render() {
             const board = document.getElementById('board');
             board.style.gridTemplateColumns = `repeat(${colCount-1}, 60px 15px) 60px`;
@@ -396,7 +408,7 @@
         function updateStatus() {
             const status = document.getElementById('status-bar');
             if(!gameOver) {
-                status.innerHTML = `[轮 ${turn}/7] 🔋Q: ${qCharges}/2 ${parsingGoal?"(解析中)":""}`;
+                status.innerHTML = `[轮 ${turn}/${maxTurns}] 🔋Q: ${qCharges}/2 ${parsingGoal?"(解析中)":""}`;
                 document.getElementById('exec-btn').style.display = (plan.Q && plan.P) ? 'inline-block' : 'none';
                 document.getElementById('reset-plan-btn').style.display = (plan.Q) ? 'inline-block' : 'none';
             }
@@ -413,7 +425,7 @@
                 if(r===qT.r && c===qT.c) return showToast("不能与 Q 重叠");
                 let d = Math.abs(r-P.r) + Math.abs(c-P.c);
                 let simSw = switchState;
-                if(plan.Q.type==='move' && SwPos && plan.Q.pos.r===SwPos.r && plan.Q.pos.c===SwPos.c) simSw = !simSw;
+                if(plan.Q.type==='move' && SwPos && plan.Q.pos.r===SwPos.r && plan.Q.pos.c===SwPos.c && (Q.r !== plan.Q.pos.r || Q.c !== plan.Q.pos.c)) simSw = !simSw;
                 if(d===0 || (d===2 && !isWallSolid((r+P.r)/2, (c+P.c)/2, simSw))) { plan.P = { type: 'move', pos: {r, c} }; calculateTPlan(); render(); }
             }
         }
@@ -426,7 +438,7 @@
 
         function calculateTPlan() {
             let simSw = switchState, simQ = (plan.Q.type==='move') ? plan.Q.pos : Q;
-            if(SwPos && plan.Q.type==='move' && simQ.r===SwPos.r && simQ.c===SwPos.c) simSw = !simSw;
+            if(SwPos && plan.Q.type==='move' && simQ.r===SwPos.r && simQ.c===SwPos.c && (Q.r !== simQ.r || Q.c !== simQ.c)) simSw = !simSw;
             let simT = {...T}, simP = P; plan.T = [];
             for(let i=0; i<2; i++) {
                 let pathP = findPath(simT, simP, simSw, plan.Q), pathQ = findPath(simT, simQ, simSw, plan.Q);
@@ -452,13 +464,35 @@
 
         async function executePlan() {
             gameOver = true; 
-            if(plan.Q.type === 'move') { Q = plan.Q.pos; if(SwPos && Q.r===SwPos.r && Q.c===SwPos.c) switchState = !switchState; render(); if(Q.r===T.r && Q.c===T.c) return endGame("失败：被捕获！", false); await sleep(500); }
+            if(plan.Q.type === 'move') { 
+                let qMoved = (Q.r !== plan.Q.pos.r || Q.c !== plan.Q.pos.c);
+                Q = plan.Q.pos; 
+                if(qMoved && SwPos && Q.r===SwPos.r && Q.c===SwPos.c) switchState = !switchState; 
+                render(); 
+                if(Q.r===T.r && Q.c===T.c) return endGame("失败：被捕获！", false); 
+                await sleep(500); 
+            }
             else { grid[plan.Q.pos.r][plan.Q.pos.c] = 4; qCharges--; render(); await sleep(500); }
-            for(let step of [...plan.T]) { T = step; plan.T = plan.T.filter(p => !(p.r===T.r && p.c===T.c)); render(); if((T.r===Q.r && T.c===Q.c) || (T.r===P.r && T.c===P.c)) return endGame("失败：被捕获！", false); await sleep(400); }
-            P = plan.P.pos; if(SwPos && P.r===SwPos.r && P.c===SwPos.c) switchState = !switchState; render(); if(P.r===T.r && P.c===T.c) return endGame("失败：被捕获！", false); await sleep(500);
+            
+            for(let step of [...plan.T]) { 
+                T = step; 
+                plan.T = plan.T.filter(p => !(p.r===T.r && p.c===T.c)); 
+                render(); 
+                if((T.r===Q.r && T.c===Q.c) || (T.r===P.r && T.c===P.c)) return endGame("失败：被捕获！", false); 
+                await sleep(400); 
+            }
+            
+            let pMoved = (P.r !== plan.P.pos.r || P.c !== plan.P.pos.c);
+            P = plan.P.pos; 
+            if(pMoved && SwPos && P.r===SwPos.r && P.c===SwPos.c) switchState = !switchState; 
+            render(); 
+            if(P.r===T.r && P.c===T.c) return endGame("失败：被捕获！", false); 
+            await sleep(500);
+            
             if (Goal && P.r === Goal.r && P.c === Goal.c) { if (parsingGoal) return endGame("成功：解析已完成！", true); else parsingGoal = true; } else parsingGoal = false;
+            
             if(plan.Q.type === 'move') qCharges = Math.min(2, qCharges + 1);
-            turn++; if(turn > 7) return endGame("超时：系统锁定。", false);
+            turn++; if(turn > maxTurns) return endGame("超时：系统锁定。", false);
             gameOver = false; clearPlan();
         }
 
@@ -486,6 +520,7 @@
             } else {
                 initGrid(6, 6, false);
                 P={r:2,c:2}; Q={r:6,c:8}; T={r:6,c:4}; Goal={r:10,c:0}; SwPos={r:6,c:6};
+                maxTurns = 7;
                 updateUIVisibility();
                 render();
             }
